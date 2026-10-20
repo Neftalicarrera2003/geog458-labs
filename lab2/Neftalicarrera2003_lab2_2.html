@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>World Cities: Exploring Population and Urban Scale</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
+    <style>
+        #map-title {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1;
+            background: white;
+            padding: 12px 18px;
+            border-radius: 4px;
+            max-width: 450px;
+            font-family: Arial, sans-serif;
+        }
+
+        #map-title h1 {
+            font-size: 20px;
+            margin: 0 0 8px 0;
+        }
+
+        #map-title p {
+            font-size: 13px;
+            margin: 0;
+        }
+        body { margin: 0; padding: 0; }
+        
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        /* Layout of the legend panel. */
+        #legend {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            z-index: 2;
+            width: 220px;
+            background: #fff;
+            margin-right: 20px;
+            margin-bottom: 40px;
+            margin: 8px 0;
+            line-height: 1.4;
+            padding: 12px;
+            border-radius: 4px;
+            text-align: left;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        /* Each row for a population value. */
+        .break {
+            position: relative;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* The circular symbol. */
+        .dot {
+            display: inline-block;
+            margin-top: 5px;
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+
+        /* Label next to the symbol. */
+        .dot-label {
+            position: absolute;
+            top: 0;
+            right: 0;
+            font-style: italic;
+        }
+
+        /* Link color within the legend. */
+        #legend a {
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <div id="map-title">
+    <h1>World Cities: Exploring Population and Urban Scale</h1>
+    <p>Exploring global population patterns across cities</p>
+    </div>
+    <div id="map"></div>
+    <div id="legend"></div>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoibmVmdGFsaWNhcnJlcmEiLCJhIjoiY211eDBmdmM4MDB4MDJ5cHUyZzY4cmR1eCJ9._pjUB56n9aJcU0DXYzz_LA';
+        const mymap = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/satellite-v9',
+            projection: 'globe',
+            center: [0, 20],
+            zoom: 1.5
+        });
+        mymap.addControl(new mapboxgl.NavigationControl());  
+        // Add the next steps here, inside this script.
+        mymap.on('style.load', () => {
+             mymap.setFog({});
+        });
+         mymap.on('load', () => {
+    // Add your source and layer here in the next section.
+        mymap.addSource('population', {
+                type: 'geojson',
+                data: 'data/world-cities.geojson'
+        });
+        mymap.addLayer({
+            id: 'population-layer',
+            type: 'circle',
+            source: 'population',
+            // Circle radius increases with population to emphasize larger cities.
+            // The step expression groups cities into four population classes.
+            // Darker red highlights cities with populations of 5 million or more.
+            paint: { 
+                'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['to-number', ['get', 'population'], 0],
+                0, 2,
+                100000, 4,
+                1000000, 8,
+                5000000, 14,
+                10000000, 20
+                ],
+                'circle-stroke-width': 1,
+                'circle-color': [
+                'step',
+                ['to-number', ['get', 'population'], 0],
+                '#fff7ec',
+                100000, '#fee8c8',
+                1000000, '#fc8d59',
+                5000000, '#7f0000'
+                ],  
+                'circle-stroke-color': 'white'
+               }
+        });
+      });
+        // Click a city circle to view its population.
+        mymap.on('click', 'population-layer', (event) => {
+            const feature = event.features[0];
+            const properties = feature.properties;
+
+        new mapboxgl.Popup()
+            .setLngLat(feature.geometry.coordinates.slice(0, 2))
+            .setHTML(`<strong>City:</strong> ${properties.accentcity}<br>
+                      <strong>Country:</strong> ${properties.country}<br>
+                      <strong>Population:</strong> ${Number(properties.population).toLocaleString()}`)
+            .addTo(mymap);
+        });
+        // Anchor the legend to the HTML element with id="legend".
+        const legend = document.getElementById('legend');
+        legend.innerHTML = `
+            <strong>City Population</strong>
+        <div style="margin-top: 10px; text-align: left;">
+            <p>
+                <span style="background:#fff7ec; display:inline-block;
+                width:14px; height:14px; border:1px solid #777;"></span>
+                Under 100,000
+            </p>
+            <p>
+                <span style="background:#fee8c8; display:inline-block;
+                width:14px; height:14px; border:1px solid #777;"></span>
+                100,000–999,999
+            </p>
+            <p>
+                <span style="background:#fc8d59; display:inline-block;
+                width:14px; height:14px; border:1px solid #777;"></span>
+                1,000,000–4,999,999
+            </p>
+            <p>
+                <span style="background:#7f0000; display:inline-block;
+                width:14px; height:14px; border:1px solid #777;"></span>
+                5,000,000+
+            </p>
+            <p style="font-size:11px;">
+                Larger circles represent larger populations.
+            </p>
+            <p style="font-size: 10px;">
+            Source: <a href="https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-populated-places/">
+            Natural Earth</a>
+            </p>
+        </div>
+    `;
+    </script>
+</body>
+</html>
